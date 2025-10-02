@@ -141,7 +141,7 @@ display.rotation = 0
 # Instantiate the NeoPixel
 pixel = neopixel.NeoPixel(board.NEOPIXEL, 1)
 pixel[0] = STARTUP
-pixel.brightness = BRIGHTNESS
+pixel.brightness = BRIGHTNESS / 10  # Dim the NeoPixel by a factor of 10
 
 # # Instantiate the ALS-PT19 light sensor
 # light_sensor = analogio.AnalogIn(board.A3)
@@ -313,7 +313,7 @@ def update_display():
     else:
         icon_suffix = "n"  # Night
     icon = wmo_to_map_icon[f"{om_json['current']['weather_code']}"][2]
-    icon_file = f"/icons_160x160/{icon}{icon_suffix}.bmp"
+    icon_file = f"/icons_80x80/{icon}{icon_suffix}.bmp"
     # print(f"Icon filename: {icon_file}")
 
     # Update icon graphic
@@ -322,8 +322,8 @@ def update_display():
     icon_bg = displayio.TileGrid(
         icon_image,
         pixel_shader=icon_image.pixel_shader,
-        x=(WIDTH // 2) - 80,
-        y=(HEIGHT // 2) - 80,
+        x=(WIDTH // 2) - 40,
+        y=(HEIGHT // 2) - 40,
     )
     image_group.insert(0, icon_bg)
 
@@ -387,12 +387,12 @@ disp_brightness(BRIGHTNESS)  # Watch it build (for the fun of it)
 
 # ### Define display graphic icon, label, and value areas ###
 # Create a replaceable icon background layer as image_group[0]
-icon_image = displayio.OnDiskBitmap("/icons_160x160/01d.bmp")
+icon_image = displayio.OnDiskBitmap("/icons_80x80/01d.bmp")
 icon_bg = displayio.TileGrid(
     icon_image,
     pixel_shader=icon_image.pixel_shader,
-    x=(WIDTH // 2) - 80,
-    y=(HEIGHT // 2) - 80,
+    x=(WIDTH // 2) - 40,
+    y=(HEIGHT // 2) - 40,
 )
 image_group.append(icon_bg)
 
