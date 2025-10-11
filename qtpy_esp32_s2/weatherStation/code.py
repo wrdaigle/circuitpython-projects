@@ -6,53 +6,6 @@ tft_dc = board.D18
 reset = board.D17
 
 
-
-# import displayio
-# import terminalio
-# from adafruit_display_text import label
-# from fourwire import FourWire
-
-# import adafruit_ili9341
-
-# # Release any resources currently in use for the displays
-# displayio.release_displays()
-
-# spi = board.SPI()
-
-
-# display_bus = FourWire(spi, command=tft_dc, chip_select=tft_cs, reset=reset)
-# display = adafruit_ili9341.ILI9341(display_bus, width=320, height=240)
-
-# # Make the display context
-# splash = displayio.Group()
-# display.root_group = splash
-
-# # Draw a green background
-# color_bitmap = displayio.Bitmap(320, 240, 1)
-# color_palette = displayio.Palette(1)
-# color_palette[0] = 0x2962C7  # Bright Blue
-
-# bg_sprite = displayio.TileGrid(color_bitmap, pixel_shader=color_palette, x=0, y=0)
-
-# splash.append(bg_sprite)
-
-# # Draw a smaller inner rectangle
-# inner_bitmap = displayio.Bitmap(280, 200, 1)
-# inner_palette = displayio.Palette(1)
-# inner_palette[0] = 0xF0F0F0  
-# inner_sprite = displayio.TileGrid(inner_bitmap, pixel_shader=inner_palette, x=20, y=20)
-# splash.append(inner_sprite)
-
-# # Draw a label
-# text_group = displayio.Group(scale=3, x=57, y=120)
-# text = "Hello World!"
-# text_area = label.Label(terminalio.FONT, text=text, color=0x0B0D10)
-# text_group.append(text_area)  # Subgroup for text scaling
-# splash.append(text_group)
-
-# while True:
-#     pass
-
 # SPDX-FileCopyrightText: 2025 JG for Cedar Grove Maker Studios
 # SPDX-License-Identifier: MIT
 """
@@ -87,6 +40,12 @@ from adafruit_display_shapes.roundrect import RoundRect
 
 from wmo_to_map_icon import wmo_to_map_icon
 from om_query import DATA_SOURCE
+
+
+import busio
+import adafruit_focaltouch
+i2c = busio.I2C(board.SCL, board.SDA)
+ft = adafruit_focaltouch.Adafruit_FocalTouch(i2c, debug=False)
 
 # Weather Display Parameters
 SAMPLE_INTERVAL = 600  # Check conditions (sec): typically 600 to 1200
@@ -237,16 +196,16 @@ def get_local_time():
     pixel[0] = NORMAL
 
 
-def toggle_clock_tick():
-    """Toggle the clock tick indicator and red LED."""
-    global clock_tick
-    if clock_tick:
-        clock_tick_mask.fill = RED
-        # led.value = True
-    else:
-        clock_tick_mask.fill = None
-        # led.value = False
-    clock_tick = not clock_tick
+# def toggle_clock_tick():
+#     """Toggle the clock tick indicator and red LED."""
+#     global clock_tick
+#     if clock_tick:
+#         clock_tick_mask.fill = RED
+#         # led.value = True
+#     else:
+#         clock_tick_mask.fill = None
+#         # led.value = False
+#     clock_tick = not clock_tick
 
 
 def update_display():
@@ -375,6 +334,7 @@ pixel[0] = STARTUP
 SMALL_FONT = bitmap_font.load_font("/fonts/Arial-12.bdf")
 MEDIUM_FONT = bitmap_font.load_font("/fonts/Arial-16.bdf")
 LARGE_FONT = bitmap_font.load_font("/fonts/Arial-Bold-24.bdf")
+XLARGE_FONT = bitmap_font.load_font("/fonts/ArialMT-48.bdf")
 
 # Define the TFT's display size
 WIDTH = display.width
@@ -446,7 +406,7 @@ sunset.color = ORANGE
 image_group.append(sunset)
 
 # Define the short and long description labels
-description = Label(LARGE_FONT, text=" ")
+description = Label(MEDIUM_FONT, text=" ")
 description.anchor_point = (0, 0)
 description.anchored_position = (10, 178)
 description.color = WHITE
@@ -459,21 +419,21 @@ long_desc.color = TEAL
 image_group.append(long_desc)
 
 # Define the temperature and humidity labels
-temperature = Label(LARGE_FONT, text=" ")
+temperature = Label(XLARGE_FONT, text=" ")
 temperature.anchor_point = (1.0, 0)
-temperature.anchored_position = (display.width - 10, 178)
+temperature.anchored_position = (display.width - 10, 172)
 temperature.color = WHITE
 image_group.append(temperature)
 
 humidity = Label(SMALL_FONT, text=" ")
 humidity.anchor_point = (1.0, 0)
-humidity.anchored_position = (display.width - 10, 210)
+humidity.anchored_position = (display.width - 10, 215)
 humidity.color = TEAL
 image_group.append(humidity)
 
-# Define the clock tick indicator shap
-clock_tick_mask = RoundRect(310, 4, 7, 8, 1, fill=VIOLET, outline=None, stroke=0)
-image_group.append(clock_tick_mask)
+# # Define the clock tick indicator shap
+# clock_tick_mask = RoundRect(310, 4, 7, 8, 1, fill=VIOLET, outline=None, stroke=0)
+# image_group.append(clock_tick_mask)
 
 gc.collect()  # Clean up displayio rendering rubbish
 
@@ -501,11 +461,16 @@ while True:
         last_time_update = current_time
 
     # Update time display every second
-    toggle_clock_tick()
+    # toggle_clock_tick()
     display_local_time(repl=False)
 
     # # Watch for and adjust to ambient light changes
     # adjust_brightness()
 
+    if ft.touched:
+        print(ft.touches)
+    # else:
+    #     print('no touch')
+    
     # Adjust wait time to as close to 1 sec as possible
-    time.sleep(max(min(1.0 - (time.monotonic() - current_time), 1.0), 0))
+    time.sleep(max(min(1.0 - (time.monotonic() - current_time), 0.15), 0))
