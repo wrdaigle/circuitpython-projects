@@ -52,6 +52,7 @@ SAMPLE_INTERVAL = 600  # Check conditions (sec): typically 600 to 1200
 NTP_INTERVAL = 3600  # Update local time from NTP server (sec): typically 3600
 BRIGHTNESS = 0.75  # TFT and NeoPixel brightness setting
 LIGHT_SENSOR = False  # True when ALS-PT19 sensor is connected to board.A3
+REQUEST_TIMEOUT = 10  # Seconds to wait for Open-Meteo before giving up
 
 # fmt: off
 # Month and weekday lookup tables
@@ -207,7 +208,6 @@ def get_local_time():
 #         # led.value = False
 #     clock_tick = not clock_tick
 
-
 def update_display():
     """Fetch latest weather condition values from Open-Mateo and
     update the display."""
@@ -227,12 +227,12 @@ def update_display():
     
     try:
         print(DATA_SOURCE)
-        with requests.get(DATA_SOURCE) as payload:
-            payload = requests.get(DATA_SOURCE)
-            print(payload.status_code)
+        with requests.get(DATA_SOURCE, timeout=REQUEST_TIMEOUT) as payload:
+            if payload.status_code != 200:
+                raise RuntimeError(f"Bad status {payload.status_code}")
             om_json = payload.json()
-            gc.collect()  # Cleans up 10kB of json payload rubbish
-            pixel[0] = NORMAL
+        gc.collect()  # Cleans up 10kB of json payload rubbish
+        pixel[0] = NORMAL
     except Exception as data_source_err:
         pixel[0] = ERROR
         print(f"ERROR: Fetch data from data source: {data_source_err}")
@@ -273,7 +273,8 @@ def update_display():
         icon_suffix = "n"  # Night
     icon = wmo_to_map_icon[f"{om_json['current']['weather_code']}"][2]
     icon_file = f"/icons_80x80/{icon}{icon_suffix}.bmp"
-    # print(f"Icon filename: {icon_file}")
+    
+    print(f"Icon filename: {icon_file}")
 
     # Update icon graphic
     image_group.pop(0)
@@ -285,6 +286,8 @@ def update_display():
         y=(HEIGHT // 2) - 40,
     )
     image_group.insert(0, icon_bg)
+
+    print(om_json)
 
     # Update temperature and humidity
     temperature.text = f"{om_json['current']['temperature_2m']:.0f}{om_json['current_units']['temperature_2m']}"
@@ -334,7 +337,6 @@ pixel[0] = STARTUP
 SMALL_FONT = bitmap_font.load_font("/fonts/Arial-12.bdf")
 MEDIUM_FONT = bitmap_font.load_font("/fonts/Arial-16.bdf")
 LARGE_FONT = bitmap_font.load_font("/fonts/Arial-Bold-24.bdf")
-XLARGE_FONT = bitmap_font.load_font("/fonts/ArialMT-48.bdf")
 
 # Define the TFT's display size
 WIDTH = display.width
@@ -419,7 +421,7 @@ long_desc.color = TEAL
 image_group.append(long_desc)
 
 # Define the temperature and humidity labels
-temperature = Label(XLARGE_FONT, text=" ")
+temperature = Label(LARGE_FONT, text=" ")
 temperature.anchor_point = (1.0, 0)
 temperature.anchored_position = (display.width - 10, 172)
 temperature.color = WHITE
@@ -467,10 +469,13 @@ while True:
     # # Watch for and adjust to ambient light changes
     # adjust_brightness()
 
-    if ft.touched:
-        print(ft.touches)
-    # else:
-    #     print('no touch')
+    try:
+        if ft.touched:
+            print(ft.touches)
+        # else:
+        #     print('no touch')
+    except:   
+        pass  
     
     # Adjust wait time to as close to 1 sec as possible
     time.sleep(max(min(1.0 - (time.monotonic() - current_time), 0.15), 0))
