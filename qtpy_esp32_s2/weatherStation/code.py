@@ -193,6 +193,7 @@ def get_local_time():
         rtc.RTC().datetime = ntp.datetime
     except Exception as time_err:
         print(f"  ERROR: Fetch local time: {time_err}")
+        alert(f"NTP error: {time_err}")
     alert("  READY")
     pixel[0] = NORMAL
 
@@ -225,6 +226,8 @@ def update_display():
     gc.collect()  # Prepare to use memory for query result
     # print(f"  mem_free() before fetch: {gc.mem_free() / 1000:.3f}kB")
     
+
+    om_json = None
     try:
         print(DATA_SOURCE)
         with requests.get(DATA_SOURCE, timeout=REQUEST_TIMEOUT) as payload:
@@ -236,67 +239,77 @@ def update_display():
     except Exception as data_source_err:
         pixel[0] = ERROR
         print(f"ERROR: Fetch data from data source: {data_source_err}")
-        print("  MCU will soft reset in 30 seconds.")
-        time.sleep(30)
-        supervisor.reload()  # Soft reset: keeps the terminal session alive
+        alert(f"Weather fetch error")
+        # Instead of freezing, just return and try again next cycle
+        return
 
     # print(f"  mem_free()  after fetch: {gc.mem_free() / 1000:.3f}kB")
 
-    # Calculate and update sunrise/sunset
-    sset = time.localtime(om_json["daily"]["sunset"][0] + om_json["utc_offset_seconds"])
-    srise = time.localtime(
-        om_json["daily"]["sunrise"][0] + om_json["utc_offset_seconds"]
-    )
-    sunrise.text = f"rise {am_pm(srise.tm_hour)[0]:2d}:{srise.tm_min:02d} {am_pm(srise.tm_hour)[1]}"
-    sunset.text = (
-        f"set {am_pm(sset.tm_hour)[0]:2d}:{sset.tm_min:02d} {am_pm(sset.tm_hour)[1]}"
-    )
+    if om_json is None:
+        # If fetch failed, skip update
+        return
 
-    wind_dir = f"{wind_direction(om_json['current']['wind_direction_10m'])}"
-    if om_json["current_units"]["wind_speed_10m"] == "mp/h":
-        wind_units = "MPH"
-    else:
-        wind_units = "km/H"
-    windspeed.text = (
-        f"{wind_dir} {om_json['current']['wind_speed_10m']:.0f} {wind_units}"
-    )
-    windgust.text = f"gusts {om_json['current']['wind_gusts_10m']:.0f} {wind_units}"
+    try:
+        # Calculate and update sunrise/sunset
+        sset = time.localtime(om_json["daily"]["sunset"][0] + om_json["utc_offset_seconds"])
+        srise = time.localtime(
+            om_json["daily"]["sunrise"][0] + om_json["utc_offset_seconds"]
+        )
+        sunrise.text = f"rise {am_pm(srise.tm_hour)[0]:2d}:{srise.tm_min:02d} {am_pm(srise.tm_hour)[1]}"
+        sunset.text = (
+            f"set {am_pm(sset.tm_hour)[0]:2d}:{sset.tm_min:02d} {am_pm(sset.tm_hour)[1]}"
+        )
 
-    # Update weather description
-    description.text = wmo_to_map_icon[f"{om_json['current']['weather_code']}"][0]
-    long_desc.text = wmo_to_map_icon[f"{om_json['current']['weather_code']}"][1]
+        wind_dir = f"{wind_direction(om_json['current']['wind_direction_10m'])}"
+        if om_json["current_units"]["wind_speed_10m"] == "mp/h":
+            wind_units = "MPH"
+        else:
+            wind_units = "km/H"
+        windspeed.text = (
+            f"{wind_dir} {om_json['current']['wind_speed_10m']:.0f} {wind_units}"
+        )
+        windgust.text = f"gusts {om_json['current']['wind_gusts_10m']:.0f} {wind_units}"
 
-    # Create icon filename
-    if om_json["current"]["is_day"]:
-        icon_suffix = "d"  # Day
-    else:
-        icon_suffix = "n"  # Night
-    icon = wmo_to_map_icon[f"{om_json['current']['weather_code']}"][2]
-    icon_file = f"/icons_80x80/{icon}{icon_suffix}.bmp"
-    
-    print(f"Icon filename: {icon_file}")
+        # Update weather description
+        description.text = wmo_to_map_icon[f"{om_json['current']['weather_code']}"][0]
+        long_desc.text = wmo_to_map_icon[f"{om_json['current']['weather_code']}"][1]
 
-    # Update icon graphic
-    image_group.pop(0)
-    icon_image = displayio.OnDiskBitmap(icon_file)
-    icon_bg = displayio.TileGrid(
-        icon_image,
-        pixel_shader=icon_image.pixel_shader,
-        x=(WIDTH // 2) - 40,
-        y=(HEIGHT // 2) - 40,
-    )
-    image_group.insert(0, icon_bg)
+        # Create icon filename
+        if om_json["current"]["is_day"]:
+            icon_suffix = "d"  # Day
+        else:
+            icon_suffix = "n"  # Night
+        icon = wmo_to_map_icon[f"{om_json['current']['weather_code']}"][2]
+        icon_file = f"/icons_80x80/{icon}{icon_suffix}.bmp"
 
-    print(om_json)
+        # Update icon graphic
+        image_group.pop(0)
+        try:
+            icon_image = displayio.OnDiskBitmap(icon_file)
+            icon_bg = displayio.TileGrid(
+                icon_image,
+                pixel_shader=icon_image.pixel_shader,
+                x=(WIDTH // 2) - 40,
+                y=(HEIGHT // 2) - 40,
+            )
+            image_group.insert(0, icon_bg)
+        except Exception as icon_err:
+            print(f"Icon load error: {icon_err}")
+            alert("Icon error")
 
-    # Update temperature and humidity
-    temperature.text = f"{om_json['current']['temperature_2m']:.0f}{om_json['current_units']['temperature_2m']}"
-    humidity.text = f"{om_json['current']['relative_humidity_2m']}{om_json['current_units']['relative_humidity_2m']} RH"
+        print(om_json)
 
-    gc.collect()  # Clean up displayio rendering rubbish
+        # Update temperature and humidity
+        temperature.text = f"{om_json['current']['temperature_2m']:.0f}{om_json['current_units']['temperature_2m']}"
+        humidity.text = f"{om_json['current']['relative_humidity_2m']}{om_json['current_units']['relative_humidity_2m']} RH"
 
-    alert("  READY")
-    pixel[0] = NORMAL
+        gc.collect()  # Clean up displayio rendering rubbish
+
+        alert("  READY")
+        pixel[0] = NORMAL
+    except Exception as display_err:
+        print(f"Display update error: {display_err}")
+        alert("Display error")
 
 
 def wind_direction(heading):
@@ -311,6 +324,7 @@ def wind_direction(heading):
 
 
 # ### Primary Initialization Process ###
+
 # Connect to the Wi-Fi AP specified in settings.toml
 pixel[0] = FETCH
 print("Connecting to Wi-Fi...")
@@ -319,9 +333,10 @@ while not wifi.radio.ipv4_address:
         wifi.radio.connect(
             os.getenv("CIRCUITPY_WIFI_SSID"), os.getenv("CIRCUITPY_WIFI_PASSWORD")
         )
-    except ConnectionError as connect_err:
+    except Exception as connect_err:
         pixel[0] = ERROR
         print("ERROR: Wi-Fi Connection Error:", connect_err)
+        alert("Wi-Fi error")
         print("    retrying in 10 seconds")
         time.sleep(10)
         continue
@@ -349,14 +364,17 @@ disp_brightness(BRIGHTNESS)  # Watch it build (for the fun of it)
 
 # ### Define display graphic icon, label, and value areas ###
 # Create a replaceable icon background layer as image_group[0]
-icon_image = displayio.OnDiskBitmap("/icons_80x80/01d.bmp")
-icon_bg = displayio.TileGrid(
-    icon_image,
-    pixel_shader=icon_image.pixel_shader,
-    x=(WIDTH // 2) - 40,
-    y=(HEIGHT // 2) - 40,
-)
-image_group.append(icon_bg)
+try:
+    icon_image = displayio.OnDiskBitmap("/icons_80x80/01d.bmp")
+    icon_bg = displayio.TileGrid(
+        icon_image,
+        pixel_shader=icon_image.pixel_shader,
+        x=(WIDTH // 2) - 40,
+        y=(HEIGHT // 2) - 40,
+    )
+    image_group.append(icon_bg)
+except:
+    pass
 
 # Define the project messaging label
 display_message = Label(SMALL_FONT, text=" ", color=YELLOW)
