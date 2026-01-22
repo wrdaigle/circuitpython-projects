@@ -1,22 +1,20 @@
 
-
 import board
 tft_cs = board.D9
 tft_dc = board.D18
 reset = board.D17
 
-
 # SPDX-FileCopyrightText: 2025 JG for Cedar Grove Maker Studios
 # SPDX-License-Identifier: MIT
-"""
-om_weather_display_code.py
-Receives Open-Meteo local weather conditions.
-Designed for the Adafruit ESP32-S3 4MB/2MB Feather (#5477) and
-2.4" TFT FeatherWing (#3315).
-"""
+# """
+# om_weather_display_code.py
+# Receives Open-Meteo local weather conditions.
+# Designed for the Adafruit ESP32-S3 4MB/2MB Feather (#5477) and
+# 2.4" TFT FeatherWing (#3315).
+# """
 
 import time
-# import board
+# # import board
 import os
 import gc
 import rtc
@@ -32,20 +30,22 @@ import supervisor
 import neopixel
 import adafruit_ntp
 import adafruit_connection_manager
+
 import adafruit_requests
+
 import adafruit_ili9341
 from adafruit_display_text.label import Label
 from adafruit_bitmap_font import bitmap_font
 from adafruit_display_shapes.roundrect import RoundRect
 
+
 from wmo_to_map_icon import wmo_to_map_icon
 from om_query import DATA_SOURCE
 
-
-import busio
-import adafruit_focaltouch
-i2c = busio.I2C(board.SCL, board.SDA)
-ft = adafruit_focaltouch.Adafruit_FocalTouch(i2c, debug=False)
+# import busio
+# import adafruit_focaltouch
+# i2c = busio.I2C(board.SCL, board.SDA)
+# ft = adafruit_focaltouch.Adafruit_FocalTouch(i2c, debug=False)
 
 # Weather Display Parameters
 SAMPLE_INTERVAL = 600  # Check conditions (sec): typically 600 to 1200
@@ -193,7 +193,7 @@ def get_local_time():
         rtc.RTC().datetime = ntp.datetime
     except Exception as time_err:
         print(f"  ERROR: Fetch local time: {time_err}")
-        alert(f"NTP error: {time_err}")
+        # alert(f"NTP error: {time_err}")
     alert("  READY")
     pixel[0] = NORMAL
 
@@ -239,7 +239,7 @@ def update_display():
     except Exception as data_source_err:
         pixel[0] = ERROR
         print(f"ERROR: Fetch data from data source: {data_source_err}")
-        alert(f"Weather fetch error")
+        # alert(f"Weather fetch error")
         # Instead of freezing, just return and try again next cycle
         return
 
@@ -295,7 +295,7 @@ def update_display():
             image_group.insert(0, icon_bg)
         except Exception as icon_err:
             print(f"Icon load error: {icon_err}")
-            alert("Icon error")
+            # alert("Icon error")
 
         print(om_json)
 
@@ -309,7 +309,7 @@ def update_display():
         pixel[0] = NORMAL
     except Exception as display_err:
         print(f"Display update error: {display_err}")
-        alert("Display error")
+        # alert("Display error")
 
 
 def wind_direction(heading):
@@ -336,7 +336,7 @@ while not wifi.radio.ipv4_address:
     except Exception as connect_err:
         pixel[0] = ERROR
         print("ERROR: Wi-Fi Connection Error:", connect_err)
-        alert("Wi-Fi error")
+        # alert("Wi-Fi error")
         print("    retrying in 10 seconds")
         time.sleep(10)
         continue
@@ -487,13 +487,14 @@ while True:
     # # Watch for and adjust to ambient light changes
     # adjust_brightness()
 
-    try:
-        if ft.touched:
-            print(ft.touches)
-        # else:
-        #     print('no touch')
-    except:   
-        pass  
+    # try:
+    #     if ft.touched:
+    #         print(ft.touches)
+    #     # else:
+    #     #     print('no touch')
+    # except:   
+    #     pass  
     
     # Adjust wait time to as close to 1 sec as possible
     time.sleep(max(min(1.0 - (time.monotonic() - current_time), 0.15), 0))
+
