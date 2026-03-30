@@ -17,6 +17,7 @@ import time
 # # import board
 import os
 import gc
+import sys
 import rtc
 import displayio
 import fourwire
@@ -209,6 +210,30 @@ def get_local_time():
 #         # led.value = False
 #     clock_tick = not clock_tick
 
+def load_icon_tilegrid(icon_name, x, y):
+    """Load a weather icon from a Python module and return a TileGrid.
+    The module is removed from sys.modules after loading to free memory."""
+    module_name = f"icons_80x80.i_{icon_name}"
+    try:
+        mod = __import__(module_name, None, None, ["W", "H", "C", "B", "P"])
+        bmp = displayio.Bitmap(mod.W, mod.H, mod.C)
+        for i, v in enumerate(mod.B):
+            bmp[i] = v
+        palette = displayio.Palette(mod.C)
+        for i in range(mod.C):
+            palette[i] = (mod.P[i * 3] << 16) | (mod.P[i * 3 + 1] << 8) | mod.P[i * 3 + 2]
+        tilegrid = displayio.TileGrid(bmp, pixel_shader=palette, x=x, y=y)
+        sys.modules.pop(module_name, None)
+        return tilegrid
+    except Exception as e:
+        print(f"Icon load error ({icon_name}): {e}")
+        return None
+    finally:
+        sys.modules.pop(module_name, None)
+        sys.modules.pop("icons_80x80", None)
+        gc.collect()
+
+
 def update_display():
     """Fetch latest weather condition values from Open-Mateo and
     update the display."""
@@ -280,22 +305,10 @@ def update_display():
         else:
             icon_suffix = "n"  # Night
         icon = wmo_to_map_icon[f"{om_json['current']['weather_code']}"][2]
-        icon_file = f"/icons_80x80/{icon}{icon_suffix}.bmp"
-
         # Update icon graphic
         image_group.pop(0)
-        try:
-            icon_image = displayio.OnDiskBitmap(icon_file)
-            icon_bg = displayio.TileGrid(
-                icon_image,
-                pixel_shader=icon_image.pixel_shader,
-                x=(WIDTH // 2) - 40,
-                y=(HEIGHT // 2) - 40,
-            )
-            image_group.insert(0, icon_bg)
-        except Exception as icon_err:
-            print(f"Icon load error: {icon_err}")
-            # alert("Icon error")
+        icon_bg = load_icon_tilegrid(f"{icon}{icon_suffix}", (WIDTH // 2) - 40, (HEIGHT // 2) - 40)
+        image_group.insert(0, icon_bg if icon_bg else displayio.Group())
 
         print(om_json)
 
@@ -364,17 +377,8 @@ disp_brightness(BRIGHTNESS)  # Watch it build (for the fun of it)
 
 # ### Define display graphic icon, label, and value areas ###
 # Create a replaceable icon background layer as image_group[0]
-try:
-    icon_image = displayio.OnDiskBitmap("/icons_80x80/01d.bmp")
-    icon_bg = displayio.TileGrid(
-        icon_image,
-        pixel_shader=icon_image.pixel_shader,
-        x=(WIDTH // 2) - 40,
-        y=(HEIGHT // 2) - 40,
-    )
-    image_group.append(icon_bg)
-except:
-    pass
+icon_bg = load_icon_tilegrid("01d", (WIDTH // 2) - 40, (HEIGHT // 2) - 40)
+image_group.append(icon_bg if icon_bg else displayio.Group())
 
 # Define the project messaging label
 display_message = Label(SMALL_FONT, text=" ", color=YELLOW)

@@ -19,3 +19,9 @@ secrets = {
     'mqtt_port' : 1883                          # adjust if necessary
     }
 ```
+
+
+# for converting bmp images
+cd /Users/bill/repos-personal/circuitpython-projects
+pip install pillow   # if not already installed
+python convert_icons.py
