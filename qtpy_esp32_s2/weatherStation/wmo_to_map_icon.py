@@ -34,7 +34,7 @@ wmo_to_map_icon = {
     "82": ["Rain", "Violent rain showers.", "09"],
     "85": ["Snow", "Slight snow showers.", "13"],
     "86": ["Snow", "Heavy snow showers.", "13"],
-    "95": ["Thunderstorm", "Thunderstorm.", "07"],
-    "96": ["Thunderstorm", "Thunderstorm with slight hail.", "07"],
-    "99": ["Thunderstorm", "Thunderstorm with heavy hail.", "07"],
+    "95": ["Thunderstorm", "Thunderstorm.", "11"],
+    "96": ["Thunderstorm", "Thunderstorm with slight hail.", "11"],
+    "99": ["Thunderstorm", "Thunderstorm with heavy hail.", "11"],
 }

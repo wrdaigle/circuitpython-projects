@@ -3,7 +3,7 @@ import board
 tft_cs = board.D9
 tft_dc = board.D18
 reset = board.D17
-
+print("Starting Weather Station Display... ")
 # SPDX-FileCopyrightText: 2025 JG for Cedar Grove Maker Studios
 # SPDX-License-Identifier: MIT
 # """
@@ -12,7 +12,7 @@ reset = board.D17
 # Designed for the Adafruit ESP32-S3 4MB/2MB Feather (#5477) and
 # 2.4" TFT FeatherWing (#3315).
 # """
-
+print("Starting Weather Station Display... ")
 import time
 # # import board
 import os
@@ -215,7 +215,8 @@ def load_icon_tilegrid(icon_name, x, y):
     The module is removed from sys.modules after loading to free memory."""
     module_name = f"icons_80x80.i_{icon_name}"
     try:
-        mod = __import__(module_name, None, None, ["W", "H", "C", "B", "P"])
+        __import__(module_name)
+        mod = sys.modules[module_name]
         bmp = displayio.Bitmap(mod.W, mod.H, mod.C)
         for i, v in enumerate(mod.B):
             bmp[i] = v

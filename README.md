@@ -2,11 +2,11 @@
 
 
 ## Viewing repl in terminal
-ls /dev/tty.*
-screen /dev/tty.board_name 115200
+`ls /dev/tty.*
+screen /dev/tty.board_name 115200`
 
 #copying files to board
-rsync -avh ./examples/simpleSensorController/ /Volumes/CIRCUITPY --delete   
+`rsync -rltvh --whole-file --modify-window=2 ./qtpy_esp32_s2/weatherStation/ /Volumes/CIRCUITPY --delete --exclude='.DS_Store' --exclude='._*'`
 
 ## secrets file
 ```
