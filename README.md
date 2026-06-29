@@ -23,5 +23,14 @@ secrets = {
 
 # for converting bmp images
 cd /Users/bill/repos-personal/circuitpython-projects
-pip install pillow   # if not already installed
-python convert_icons.py
+
+## Setup (one-time)
+Install uv if not already installed:
+```
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+## Convert icons
+```
+uv run python icons/convert_icons.py
+```
