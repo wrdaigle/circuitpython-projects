@@ -2,11 +2,15 @@
 
 
 ## Viewing repl in terminal
-`ls /dev/tty.*
-screen /dev/tty.board_name 115200`
+```
+ls /dev/tty.*
+screen /dev/tty.board_name 115200
+```
 
-#copying files to board
-`rsync -rltvh --whole-file --modify-window=2 ./qtpy_esp32_s2/weatherStation/ /Volumes/CIRCUITPY --delete --exclude='.DS_Store' --exclude='._*'`
+## Copying files to board
+```
+rsync -rltvh --whole-file --modify-window=2 ./qtpy_esp32_s2/weatherStation/ /Volumes/CIRCUITPY --delete --exclude='.DS_Store' --exclude='._*'
+```
 
 ## secrets file
 ```
@@ -21,16 +25,10 @@ secrets = {
 ```
 
 
-# for converting bmp images
-cd /Users/bill/repos-personal/circuitpython-projects
-
-## Setup (one-time)
-Install uv if not already installed:
-```
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-## Convert icons
+## Converting icons
+Run from project root:
 ```
 uv run python icons/convert_icons.py
 ```
+
+Downloads Adafruit mpy-cross for CircuitPython 9.1.4 (arm64) on first run, caches it in `icons/tools/`.

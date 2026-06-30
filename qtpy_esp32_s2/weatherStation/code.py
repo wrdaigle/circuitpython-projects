@@ -27,6 +27,8 @@ from digitalio import DigitalInOut, Direction
 import pwmio
 # import analogio
 import supervisor
+import watchdog
+import microcontroller
 # from simpleio import map_range
 import neopixel
 import adafruit_ntp
@@ -306,8 +308,9 @@ def update_display():
         else:
             icon_suffix = "n"  # Night
         icon = wmo_to_map_icon[f"{om_json['current']['weather_code']}"][2]
-        # Update icon graphic
+        # Update icon graphic — free old bitmap before allocating new one
         image_group.pop(0)
+        gc.collect()
         icon_bg = load_icon_tilegrid(f"{icon}{icon_suffix}", (WIDTH // 2) - 40, (HEIGHT // 2) - 40)
         image_group.insert(0, icon_bg if icon_bg else displayio.Group())
 
@@ -359,6 +362,11 @@ pixel[0] = NORMAL
 
 pool = adafruit_connection_manager.get_radio_socketpool(wifi.radio)
 requests = adafruit_requests.Session(pool, ssl.create_default_context())
+
+# Watchdog: reset the board if it locks up for more than 60 seconds
+wdt = microcontroller.watchdog
+wdt.timeout = 60
+wdt.mode = watchdog.WatchDogMode.RESET
 
 pixel[0] = STARTUP
 
@@ -471,7 +479,20 @@ update_display()  # Fetch initial data from Open-Mateo
 
 # ### Main Loop ###
 while True:
+    wdt.feed()
     current_time = time.monotonic()
+
+    # Reconnect WiFi if dropped
+    if not wifi.radio.ipv4_address:
+        pixel[0] = ERROR
+        print("Wi-Fi lost, reconnecting...")
+        try:
+            wifi.radio.connect(
+                os.getenv("CIRCUITPY_WIFI_SSID"), os.getenv("CIRCUITPY_WIFI_PASSWORD")
+            )
+            pixel[0] = NORMAL
+        except Exception as wifi_err:
+            print(f"Wi-Fi reconnect failed: {wifi_err}")
 
     # Update weather every SAMPLE_INTERVAL seconds
     if current_time - last_weather_update > SAMPLE_INTERVAL:
